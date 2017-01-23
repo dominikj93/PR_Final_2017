@@ -1,20 +1,15 @@
-function out = skew_correction(im)
+function proccesed_im = skew_correction(input_im)
 
-% interpolation method for resize ('bicubic', 'bilinear' or 'nearest');
-resize_type = 'bicubic'; 
-% size after resizing
-size_row = 20;
-size_col = 20;
-a = input_im ...
-    * im_box([],0,1) ... % add rows/columns to make images square 
-    * im_resize([],[size_row size_col], resize_type) ... % size of images 
-    * im_box([],1,0); % add rows/columns and keep image square
-a = prdataset(a, getlabels(sparse_data));
-im = prdataset(im);
-moments = im_moments(im,'central');
-alpha = atan(2*moments(3)/(moments(1)-moments(2)));
-tform = maketform('affine',[1 0 0; sin(0.5*pi-alpha) cos(0.5*pi-alpha) 0; 0 0 1]);
+% removing slant
+input_im = double(input_im); % make data readable for im_box
+%input_im = im_box(input_im,[10,10,10,0]);
+M = im_moments(input_im,'central');       % central moments
+theta = atan(2*M(3)/(M(1)-M(2)));   % skewness 
+if theta<0 % Correction of failures in skew computation
+    theta = 0.5*pi;
+end
+A = [1 0 0; sin(0.5*pi-theta) cos(0.5*pi-theta) 0;0 0 1];
+tform = affine2d(A);
+proccesed_im = imwarp(input_im,tform,'nearest');
 
-im = imtransform(im,tform);
-out = im_box(im,1,1);
 end
